@@ -18,49 +18,68 @@ function onReady(convert, options, $){
     var title = $(".titleBar h1").innerHTML;
 
     console.debug("[Author] User logged", userLogged);
+    
     if(title.lastIndexOf(userLogged)>-1){
         console.debug("[Author] Detecting owner profile")
+        var titleBar = $(".titleBar");
 
-        var resourcesD = []; // Stores the ids of the resources (used to download the resource pages)
-        var loadIndex = 0; // The current resource loading
+        var div = document.createElement("div");
+        div.style = "height: 100%";
 
-        var resourcesData = []; // The final loaded resources
+        var startGraph = document.createElement("button");
+        startGraph.style = "background-color: #3a6581; float: right; cursor: pointer; height: auto; color: #fff; padding: 5px 10px; border-radius: 6px;"
+        startGraph.textContent = "Start Graph";
+        startGraph.className = "textCtrl";
+        startGraph.addEventListener("click", function(e){
+            e.preventDefault();
+            startGraphing(convert, options, $);
+        });
 
-        // Load the first page from the current document
-        console.log("Reading page 1");
-        readPage(document);
+        div.appendChild(startGraph);
+        titleBar.prepend(div);
+    }
+}
 
-        var resourcesCount = parseInt($("#authorStats .resourceCount dd").innerText);
-        var pages = Math.ceil(resourcesCount / 20); // 20 is number of resources per page
+function startGraphing(convert, options, $){
+    var resourcesD = []; // Stores the ids of the resources (used to download the resource pages)
+    var loadIndex = 0; // The current resource loading
 
-        if(pages==1){
-            loadResources();
+    var resourcesData = []; // The final loaded resources
+
+    // Load the first page from the current document
+    console.log("Reading page 1");
+    readPage(document);
+
+    var resourcesCount = parseInt($("#authorStats .resourceCount dd").innerText);
+    var pages = Math.ceil(resourcesCount / 20); // 20 is number of resources per page
+
+    if(pages==1){
+        loadResources();
+    }
+
+    for(var j = 0; j < pages; j++){
+        const page = j + 1;
+
+        // We already have the first page, so just skip it
+        if(page==1){
+            continue;
         }
 
-        for(var j = 0; j < pages; j++){
-            const page = j + 1;
+        fetch(window.location.href + "?page=" + page, {
+            'credentials': 'same-origin'
+        }).then((response) => {
+            return response.text();
+        }).then((body) => {
+            const parser = new DOMParser();
+            const htmlDocument = parser.parseFromString(body, "text/html");
 
-            // We already have the first page, so just skip it
-            if(page==1){
-                continue;
+            console.log("Downloading page: "+page + " of " + pages);
+            readPage(htmlDocument);
+
+            if (pages == page) {
+                loadResources();
             }
-
-            fetch(window.location.href + "?page=" + page, {
-                'credentials': 'same-origin'
-            }).then((response) => {
-                return response.text();
-            }).then((body) => {
-                const parser = new DOMParser();
-                const htmlDocument = parser.parseFromString(body, "text/html");
-
-                console.log("Downloading page: "+page + " of " + pages);
-                readPage(htmlDocument);
-
-                if (pages == page) {
-                    loadResources();
-                }
-            });
-        }
+        });
     }
 
     function loadResources(){
